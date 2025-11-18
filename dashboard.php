@@ -1710,7 +1710,7 @@
           <i class="fa fa-comments"></i>
         </div>
         <div class="support-item-content">
-          <h4>yangapoint</h4>
+          <h4>Kobopoint</h4>
           <p>Reply instantly</p>
         </div>
       </div>
@@ -2433,7 +2433,7 @@
     function handleSupportAction(action) {
       switch(action) {
         case 'ai':
-          alert('yangapoint chat will open here');
+          alert('Kobopoint chat will open here');
           // You can implement AI chat integration here
           break;
         case 'email':
@@ -2510,4 +2510,5 @@
 
 </body>
 </html>
+
 
