@@ -157,3 +157,81 @@
 </script>
 </body>
 </html>
+<?php
+// Simple page to request a password reset link via POST /api/forgot-password
+?>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Forgot Password</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; background:#f6f7fb; margin:0; }
+    .container { max-width: 420px; margin: 6vh auto; background:#fff; padding: 24px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.08); }
+    h1 { font-size: 20px; margin: 0 0 16px; }
+    label { display:block; font-weight:600; margin: 12px 0 6px; }
+    input { width: 100%; padding: 10px 12px; border: 1px solid #dcdfe6; border-radius: 8px; outline: none; }
+    input:focus { border-color: #409eff; box-shadow: 0 0 0 3px rgba(64,158,255,0.15); }
+    button { display:block; width:100%; background:#409eff; color:#fff; border:none; border-radius:8px; padding:10px 12px; margin-top:16px; cursor:pointer; font-weight:600; }
+    button:hover { background:#318ce7; }
+    .msg { margin-top: 12px; padding:10px; border-radius:8px; }
+    .msg.error { background:#ffecec; color:#b00020; }
+    .msg.success { background:#e9ffec; color:#1f7a1f; }
+    .link { margin-top: 12px; text-align:center; }
+    .link a { color:#409eff; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Forgot Password</h1>
+    <div id="message" class="msg" style="display:none"></div>
+    <form id="forgotForm">
+      <label for="email">Email</label>
+      <input type="email" id="email" required placeholder="you@example.com">
+      <button type="submit">Send Reset Link</button>
+    </form>
+    <div class="link">
+      <a href="/auth/login">Back to Login</a>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = localStorage.getItem('api_base') || 'http://127.0.0.1:8000';
+    const msgEl = document.getElementById('message');
+    const formEl = document.getElementById('forgotForm');
+
+    function showMessage(text, type = 'error') {
+      msgEl.textContent = text;
+      msgEl.className = 'msg ' + (type === 'success' ? 'success' : 'error');
+      msgEl.style.display = 'block';
+    }
+
+    async function apiPost(path, body) {
+      const res = await fetch(API_BASE + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message = data.message || 'Request failed';
+        throw new Error(message);
+      }
+      return data;
+    }
+
+    formEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msgEl.style.display = 'none';
+      const email = document.getElementById('email').value.trim();
+      try {
+        const resp = await apiPost('/api/forgot-password', { email });
+        showMessage(resp.message || 'Reset link sent if the email exists.', 'success');
+      } catch (err) {
+        showMessage(err.message || 'Failed to send reset link');
+      }
+    });
+  </script>
+</body>
+</html>

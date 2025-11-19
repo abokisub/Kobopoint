@@ -1388,6 +1388,36 @@
     }
 
   </style>
+  <!-- SweetAlert2 for nice pop-up notifications -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    /* Compact fintech-style popup for SweetAlert */
+    .fintech-popup {
+      width: 320px !important;
+      padding: 14px 16px !important;
+      border-radius: 14px !important;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12) !important;
+    }
+    .fintech-title {
+      font-size: 16px !important;
+      line-height: 20px !important;
+      font-weight: 700 !important;
+    }
+    .fintech-text {
+      font-size: 13px !important;
+      color: #565b66 !important;
+    }
+    .fintech-icon .swal2-success-ring { width: 38px; height: 38px; }
+    .fintech-icon .swal2-success-circular-line-right,
+    .fintech-icon .swal2-success-circular-line-left { display: none !important; }
+    .fintech-icon .swal2-success-line-tip,
+    .fintech-icon .swal2-success-line-long { transform: scale(0.9); }
+    .fintech-confirm-btn {
+      border-radius: 10px !important;
+      padding: 8px 14px !important;
+      font-weight: 700 !important;
+    }
+  </style>
 </head>
 <body>
   <!-- Home Page -->
@@ -1400,7 +1430,7 @@
         </div>
         <div class="greeting">
           <div style="font-size:13px;color:var(--muted)">Hello 👋</div>
-          <small>Fawwas <i class="fa fa-check-circle verified-badge"></i></small>
+          <small><span class="greeting-first-name">-</span> <i class="fa fa-check-circle verified-badge"></i></small>
         </div>
       </div>
       <div class="header-icons">
@@ -1431,7 +1461,7 @@
         <div class="balance-left">
           <div class="balance">
             <span id="currencySymbol" style="font-size:18px;color:var(--muted);font-weight:700">₦</span>
-            <span id="balanceAmount">100,000.00</span>
+            <span id="balanceAmount">-</span>
           </div>
           <div class="acc-info-left">
             <i class="fa fa-clock-o" aria-hidden="true"></i>
@@ -1481,7 +1511,7 @@
         <div class="shop-icon-wrapper">
           <i class="fa fa-building"></i>
         </div>
-        <div class="account-text">1000001164 RUBIES MFB</div>
+        <div id="accountText" class="account-text">Loading account…</div>
       </div>
       <div class="copy-icon-wrapper" onclick="copyAccountNumber()" title="Copy account number">
         <i class="fa fa-copy"></i>
@@ -1498,6 +1528,42 @@
         <i class="fa fa-paper-plane"></i>
         <span>Send Money</span>
       </button>
+    </div>
+
+    <!-- Send Money Modal -->
+    <div id="sendMoneyOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);z-index:1000;"></div>
+    <div id="sendMoneyModal" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%, -50%);background:#fff;width:92%;max-width:420px;border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,0.18);z-index:1001;padding:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-weight:800;font-size:16px;">Send Money</div>
+        <button onclick="closeSendMoney()" style="background:transparent;border:none;font-size:18px;color:#888;cursor:pointer">×</button>
+      </div>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:12px;color:#666;font-weight:700;">Bank</label>
+          <select id="bankSelect" style="width:100%;padding:10px;border:1px solid #e1e1e1;border-radius:10px;font-size:14px;">
+            <option value="">Loading banks…</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;color:#666;font-weight:700;">Account number</label>
+          <input id="accountNumberInput" type="tel" placeholder="e.g. 0123456789" maxlength="10" style="width:100%;padding:10px;border:1px solid #e1e1e1;border-radius:10px;font-size:14px;"/>
+          <div id="accountNameResolved" style="min-height:18px;margin-top:6px;font-size:12px;font-weight:700;color:#2e7d32;"> 
+            <!-- beneficiary name appears here after auto‑resolve -->
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;color:#666;font-weight:700;">Amount (NGN)</label>
+          <input id="amountInput" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;padding:10px;border:1px solid #e1e1e1;border-radius:10px;font-size:14px;"/>
+        </div>
+        <div>
+          <label style="font-size:12px;color:#666;font-weight:700;">Narration (optional)</label>
+          <input id="narrationInput" type="text" maxlength="50" placeholder="e.g. Transfer" style="width:100%;padding:10px;border:1px solid #e1e1e1;border-radius:10px;font-size:14px;"/>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
+          <button onclick="closeSendMoney()" style="background:#eee;color:#333;border:none;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer">Cancel</button>
+          <button id="sendMoneyContinueBtn" onclick="submitSendMoney()" style="background:#00b875;color:#fff;border:none;border-radius:10px;padding:10px 12px;font-weight:800;cursor:pointer">Continue</button>
+        </div>
+      </div>
     </div>
 
     <!-- Quick Access -->
@@ -1682,7 +1748,7 @@
         </div>
         <div class="greeting">
           <div style="font-size:13px;color:var(--muted)">Hello 👋</div>
-          <small>Fawwas <i class="fa fa-check-circle verified-badge"></i></small>
+          <small><span class="greeting-first-name">-</span> <i class="fa fa-check-circle verified-badge"></i></small>
         </div>
       </div>
       <div class="header-icons">
@@ -1767,7 +1833,7 @@
         </div>
         <div class="greeting">
           <div style="font-size:13px;color:var(--muted)">Hello 👋</div>
-          <small>Fawwas <i class="fa fa-check-circle verified-badge"></i></small>
+          <small><span class="greeting-first-name">-</span> <i class="fa fa-check-circle verified-badge"></i></small>
         </div>
       </div>
       <div class="header-icons">
@@ -1894,7 +1960,7 @@
     <div class="card-balance-card">
       <div class="balance-info">
         <div class="balance-label">Available Balance</div>
-        <div class="balance-amount">₦95,000.00</div>
+        <div id="availableBalanceCardAmount" class="balance-amount">₦-</div>
       </div>
       <div class="balance-info">
         <div class="balance-label">Spent This Month</div>
@@ -2018,7 +2084,7 @@
         </div>
         <div class="greeting">
           <div style="font-size:13px;color:var(--muted)">Hello 👋</div>
-          <small>Fawwas <i class="fa fa-check-circle verified-badge"></i></small>
+          <small><span class="greeting-first-name">-</span> <i class="fa fa-check-circle verified-badge"></i></small>
         </div>
       </div>
       <div class="header-icons">
@@ -2136,13 +2202,64 @@
   </div>
 
   <script>
-    // Copy account number
+    // Copy account number (uses the fetched value)
     function copyAccountNumber() {
-      const accountNumber = '1000001164';
+      const accountNumber = window.kpAccountNumber || '';
+      if (!accountNumber) {
+        // Sweet warning popup when number not available
+        if (window.Swal) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Account not ready',
+            text: 'Your account number is not available yet. Please try again shortly.',
+            confirmButtonText: 'OK'
+          });
+        } else {
+          alert('Account number not available yet. Please wait and try again.');
+        }
+        return;
+      }
       navigator.clipboard.writeText(accountNumber).then(function() {
-        alert('Account number copied: ' + accountNumber);
+        // Mask for display: keep last 4 only
+        const last4 = String(accountNumber).slice(-4);
+        const maskedDisplay = (String(accountNumber).length > 4)
+          ? (accountNumber.replace(/.(?=.{4})/g, '*'))
+          : ('****' + last4);
+        // Sweet centered, compact fintech popup
+        if (window.Swal) {
+          Swal.fire({
+            position: 'center',
+            icon: 'success',
+            title: 'Copied',
+            html: `<div style="margin-top:4px;">Account number copied<br><strong>${maskedDisplay}</strong></div>`,
+            customClass: {
+              popup: 'fintech-popup',
+              title: 'fintech-title',
+              htmlContainer: 'fintech-text',
+              icon: 'fintech-icon',
+              confirmButton: 'fintech-confirm-btn'
+            },
+            showConfirmButton: false,
+            timer: 1600,
+            timerProgressBar: true,
+            allowOutsideClick: true,
+            allowEscapeKey: true
+          });
+        } else {
+          alert('Account number copied: ' + last4);
+        }
       }).catch(function(err) {
         console.error('Could not copy text: ', err);
+        if (window.Swal) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Copy failed',
+            text: 'Could not copy account number. Please try again.',
+            confirmButtonText: 'OK'
+          });
+        } else {
+          alert('Could not copy account number.');
+        }
       });
     }
 
@@ -2153,7 +2270,8 @@
           alert('Add Money feature will open here');
           break;
         case 'sendMoney':
-          alert('Send Money feature will open here');
+          // Navigate to standalone Send Money page
+          window.location.href = '/transfer/send';
           break;
       }
     }
@@ -2176,9 +2294,15 @@
     let currentCurrency = 'NGN';
     let currentSymbol = '₦';
     let currentBalance = {
-      'NGN': '100,000.00',
-      'USDC': '500.00'
+      'NGN': '-',
+      'USDC': '-'
     };
+
+    function formatAmount(n) {
+      const num = Number(n);
+      if (isNaN(num)) return '0.00';
+      return num.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
     function toggleCurrencyDropdown(event) {
       event.stopPropagation();
@@ -2507,7 +2631,322 @@
     }
 
   </script>
+  <script>
+    // Fetch user profile from backend and populate greeting, balance, and account details
+    (function initDashboard(){
+      const API_BASE = localStorage.getItem('api_base') || 'http://127.0.0.1:8000';
+      const token = localStorage.getItem('kp_token');
+      if (!token) {
+        // Redirect to login if token missing
+        window.location.href = '/auth/login';
+        return;
+      }
 
+      async function apiGet(path) {
+        const res = await fetch(API_BASE + path, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const message = data.message || 'Request failed';
+          throw new Error(message);
+        }
+        return data;
+      }
+
+      function setText(selectorOrEl, text) {
+        if (!selectorOrEl) return;
+        const el = typeof selectorOrEl === 'string' ? document.querySelector(selectorOrEl) : selectorOrEl;
+        if (el) el.textContent = text;
+      }
+
+      async function loadUser() {
+        try {
+          const user = await apiGet('/api/user');
+          const firstName = (user.first_name && String(user.first_name).trim()) ||
+                           (user.name ? String(user.name).split(' ')[0] : '') || '';
+          // Update greetings across pages
+          document.querySelectorAll('.greeting-first-name').forEach(el => {
+            el.textContent = firstName || '-';
+          });
+
+          // Balance
+          const ngnBalance = formatAmount(user.balance ?? 0);
+          // cache and set default currency NGN
+          if (typeof currentBalance === 'object') {
+            currentBalance['NGN'] = ngnBalance;
+          }
+          setText('#balanceAmount', ngnBalance);
+          const cardAvailEl = document.getElementById('availableBalanceCardAmount');
+          if (cardAvailEl) {
+            cardAvailEl.textContent = (typeof currentSymbol !== 'undefined' ? currentSymbol : '₦') + ngnBalance;
+          }
+
+          // Account details
+          const acctNum = user.bell_account_number || '';
+          const acctMasked = user.bell_account_number_masked || '';
+          const displayAccountName = firstName ? ('KoboPoint-' + firstName) : '';
+          window.kpAccountNumber = acctNum; // used by copy button
+          let displayText = 'Account not provisioned yet';
+          if (acctNum) {
+            displayText = acctNum + (displayAccountName ? (' ' + displayAccountName) : '');
+          } else if (acctMasked) {
+            displayText = acctMasked + (displayAccountName ? (' ' + displayAccountName) : '');
+          }
+          setText('#accountText', displayText);
+        } catch (err) {
+          console.warn('Failed to load user:', err.message || err);
+          // Keep placeholders, but avoid the perpetual "Loading account…"
+          setText('#accountText', 'Account not provisioned yet');
+          setText('#balanceAmount', '0.00');
+        }
+      }
+
+      // Trigger load on DOM ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadUser);
+      } else {
+        loadUser();
+      }
+    })();
+  </script>
+  <script>
+    // Send Money modal logic and bank fetching
+    function openSendMoney() {
+      document.getElementById('sendMoneyOverlay').style.display = 'block';
+      document.getElementById('sendMoneyModal').style.display = 'block';
+      // Fetch banks once opened
+      loadBanks();
+      // In case values are already set, attempt resolve immediately
+      setTimeout(maybeAutoResolveAccountName, 0);
+    }
+    function closeSendMoney() {
+      document.getElementById('sendMoneyOverlay').style.display = 'none';
+      document.getElementById('sendMoneyModal').style.display = 'none';
+    }
+    async function loadBanks() {
+      try {
+        const API_BASE = localStorage.getItem('api_base') || 'http://127.0.0.1:8000';
+        const token = localStorage.getItem('kp_token');
+        const res = await fetch(API_BASE + '/api/banks', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json().catch(() => ({}));
+        const select = document.getElementById('bankSelect');
+        select.innerHTML = '';
+        const banks = (data && data.banks) ? data.banks : [];
+        if (!banks.length) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'No banks available';
+          select.appendChild(opt);
+          return;
+        }
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select bank';
+        select.appendChild(placeholder);
+        banks.forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b.code;
+          opt.textContent = b.name;
+          select.appendChild(opt);
+        });
+      } catch (e) {
+        const select = document.getElementById('bankSelect');
+        select.innerHTML = '';
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Failed to load banks';
+        select.appendChild(opt);
+      }
+    }
+    // Auto resolve beneficiary name when bank is selected and account number reaches 10 digits
+    let resolveDebounce;
+    function setResolveStatus(text, status) {
+      const el = document.getElementById('accountNameResolved');
+      if (!el) return;
+      window.kpResolvedStatus = status;
+      if (status === 'ok' && text) {
+        el.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px"><span>${text}</span><span style="background:#e6f5ea;color:#2e7d32;border:1px solid #c8e6c9;padding:2px 6px;border-radius:999px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px"><i class='fa fa-check'></i> Verified</span></span>`;
+      } else {
+        el.textContent = text || '';
+      }
+      const colors = { pending: '#777', ok: '#2e7d32', error: '#b00020', default: '#2e7d32' };
+      el.style.color = colors[status] || colors.default;
+      updateSendMoneyContinueState();
+    }
+    function maybeAutoResolveAccountName() {
+      const bankCode = (document.getElementById('bankSelect') || {}).value || '';
+      const inputEl = document.getElementById('accountNumberInput');
+      if (!inputEl) return;
+      let acct = (inputEl.value || '').replace(/\D+/g, '');
+      inputEl.value = acct;
+      if (bankCode && acct.length === 10) {
+        setResolveStatus('Resolving…', 'pending');
+        clearTimeout(resolveDebounce);
+        resolveDebounce = setTimeout(() => resolveAccountName(bankCode, acct), 350);
+      } else if (acct.length > 0 && acct.length < 10) {
+        setResolveStatus('Enter 10-digit account number', 'error');
+      } else {
+        setResolveStatus('', '');
+      }
+      updateSendMoneyContinueState();
+    }
+    async function resolveAccountName(bankCode, accountNumber) {
+      try {
+        const API_BASE = localStorage.getItem('api_base') || 'http://127.0.0.1:8000';
+        const token = localStorage.getItem('kp_token');
+        const url = API_BASE + `/api/banks/resolve?bank_code=${encodeURIComponent(bankCode)}&account_number=${encodeURIComponent(accountNumber)}`;
+        const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data && data.resolved_name) {
+          window.kpResolvedName = data.resolved_name;
+          setResolveStatus(data.resolved_name, 'ok');
+        } else {
+          const msg = (data && data.error) ? data.error : 'Could not resolve account name';
+          setResolveStatus(msg, 'error');
+          window.kpResolvedName = undefined;
+        }
+      } catch (err) {
+        setResolveStatus('Network error while resolving', 'error');
+        window.kpResolvedName = undefined;
+      }
+    }
+    function updateSendMoneyContinueState() {
+      const btn = document.getElementById('sendMoneyContinueBtn');
+      if (!btn) return;
+      const bankCode = (document.getElementById('bankSelect') || {}).value || '';
+      const acct = ((document.getElementById('accountNumberInput') || {}).value || '').replace(/\D+/g, '');
+      const ok = !!bankCode && acct.length === 10 && window.kpResolvedStatus === 'ok' && !!window.kpResolvedName;
+      btn.disabled = !ok;
+      btn.style.opacity = ok ? '1' : '0.6';
+      btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+    }
+    // Attach listeners for auto-resolve
+    document.addEventListener('DOMContentLoaded', function () {
+      const acctEl = document.getElementById('accountNumberInput');
+      const bankEl = document.getElementById('bankSelect');
+      if (acctEl) acctEl.addEventListener('input', maybeAutoResolveAccountName);
+      if (bankEl) bankEl.addEventListener('change', maybeAutoResolveAccountName);
+    });
+    function submitSendMoney() {
+      const bankCode = document.getElementById('bankSelect').value;
+      const accountNumber = document.getElementById('accountNumberInput').value.trim();
+      const amount = document.getElementById('amountInput').value.trim();
+      const narration = document.getElementById('narrationInput').value.trim();
+      if (!bankCode || accountNumber.length !== 10 || !amount || Number(amount) <= 0) {
+        if (window.Swal) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Check details',
+            text: 'Please select a bank, enter a valid 10-digit account number, and an amount greater than 0.',
+            customClass: { popup: 'fintech-popup', title: 'fintech-title', htmlContainer: 'fintech-text', confirmButton: 'fintech-confirm-btn' }
+          });
+        }
+        return;
+      }
+      if (!window.kpResolvedName || window.kpResolvedStatus !== 'ok') {
+        if (window.Swal) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Resolve beneficiary',
+            text: 'Please wait while we verify the beneficiary name or adjust the bank/account number.',
+            customClass: { popup: 'fintech-popup', title: 'fintech-title', htmlContainer: 'fintech-text', confirmButton: 'fintech-confirm-btn' }
+          });
+        }
+        return;
+      }
+      if (window.Swal) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Preview',
+          html: `<div class="fintech-text">Bank code: <strong>${bankCode}</strong><br>Account: <strong>${accountNumber}</strong><br>Beneficiary: <strong>${window.kpResolvedName || '—'}</strong><br>Amount: <strong>₦${formatAmount(amount)}</strong><br>Narration: <strong>${narration || '-'}</strong></div>`,
+          showCancelButton: true,
+          confirmButtonText: 'Looks good',
+          cancelButtonText: 'Edit',
+          customClass: { popup: 'fintech-popup', title: 'fintech-title', htmlContainer: 'fintech-text', confirmButton: 'fintech-confirm-btn' }
+        }).then((res) => {
+          if (res && res.isConfirmed) {
+            doInitiateTransfer(bankCode, accountNumber, amount, narration);
+          }
+        });
+      }
+    }
+    async function doInitiateTransfer(bankCode, accountNumber, amount, narration) {
+      const API_BASE = localStorage.getItem('api_base') || 'http://127.0.0.1:8000';
+      const token = localStorage.getItem('kp_token');
+      try {
+        if (window.Swal) {
+          Swal.fire({
+            icon: 'info',
+            title: 'Processing transfer…',
+            text: 'Please wait while we submit your transfer.',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            customClass: { popup: 'fintech-popup', title: 'fintech-title', htmlContainer: 'fintech-text' }
+          });
+        }
+        const payload = {
+          beneficiaryBankCode: bankCode,
+          beneficiaryAccountNumber: accountNumber,
+          narration: narration || '',
+          amount: Number(amount),
+          // reference and senderName are optional; backend will generate defaults
+        };
+        const res = await fetch(API_BASE + '/api/transfers', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data && data.success) {
+          const d = data.data || {};
+          const destinationName = d.destinationAccountName || window.kpResolvedName || 'Beneficiary';
+          const destinationAcct = d.destinationAccountNumber || accountNumber;
+          const destinationBank = d.destinationBankName || '';
+          const ref = d.reference || '';
+          if (window.Swal) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Transfer submitted',
+              html: `<div class="fintech-text">Sent to: <strong>${destinationName}</strong><br>Account: <strong>${destinationAcct}</strong><br>Bank: <strong>${destinationBank || bankCode}</strong><br>Amount: <strong>₦${formatAmount(amount)}</strong><br>Reference: <strong>${ref || '-'}</strong><br>Status: <strong>${d.status || 'pending'}</strong></div>`,
+              confirmButtonText: 'Done',
+              customClass: { popup: 'fintech-popup', title: 'fintech-title', htmlContainer: 'fintech-text', confirmButton: 'fintech-confirm-btn' }
+            });
+          }
+          // Optionally close modal
+          closeSendMoney();
+        } else {
+          const msg = (data && data.message) ? data.message : 'Request Unsuccessful';
+          if (window.Swal) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Transfer failed',
+              text: msg,
+              confirmButtonText: 'Try again',
+              customClass: { popup: 'fintech-popup', title: 'fintech-title', htmlContainer: 'fintech-text', confirmButton: 'fintech-confirm-btn' }
+            });
+          }
+        }
+      } catch (e) {
+        if (window.Swal) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Network error',
+            text: 'Please check your connection and try again.',
+            confirmButtonText: 'OK',
+            customClass: { popup: 'fintech-popup', title: 'fintech-title', htmlContainer: 'fintech-text', confirmButton: 'fintech-confirm-btn' }
+          });
+        }
+      }
+    }
+  </script>
+  
 </body>
 </html>
 
