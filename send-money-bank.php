@@ -58,7 +58,7 @@
         <input id="narrationInput" type="text" placeholder="Description" />
       </div>
       <div class="actions">
-        <button id="sendMoneyContinueBtn" class="btn btn-primary" disabled>Continue</button>
+        <button id="sendMoneyContinueBtn" class="btn btn-primary" disabled aria-busy="false">Continue</button>
       </div>
     </div>
   </div>
@@ -165,9 +165,17 @@
   }
 
   async function doInitiateTransfer(bankCode, accountNumber, amount, narration) {
+    const btn = document.getElementById('sendMoneyContinueBtn');
     try {
       if (window.Swal) {
         Swal.fire({ icon:'info', title:'Processing transfer…', text:'Please wait while we submit your transfer.', allowOutsideClick:false, allowEscapeKey:false, showConfirmButton:false });
+      }
+      // Button loading state
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+        btn.dataset.originalText = btn.textContent;
+        btn.textContent = 'Sending...';
       }
       const payload = { beneficiaryBankCode: bankCode, beneficiaryAccountNumber: accountNumber, narration: narration || '', amount: Number(amount) };
       const res = await fetch(API_BASE + '/api/transfers', {
@@ -192,6 +200,14 @@
       }
     } catch (e) {
       if (window.Swal) { Swal.fire({ icon:'error', title:'Network error', text:'Please check your connection and try again.' }); } else { alert('Network error'); }
+    }
+    finally {
+      // Restore button state if we didn't navigate away
+      if (btn) {
+        btn.disabled = false;
+        btn.setAttribute('aria-busy', 'false');
+        if (btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
+      }
     }
   }
 

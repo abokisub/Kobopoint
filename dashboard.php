@@ -1524,7 +1524,7 @@
         <i class="fa fa-plus-circle"></i>
         <span>Add Money</span>
       </button>
-      <button class="action-btn" onclick="handleAction('sendMoney')">
+      <button class="action-btn" id="sendMoneyBtn" onclick="handleAction('sendMoney')">
         <i class="fa fa-paper-plane"></i>
         <span>Send Money</span>
       </button>
@@ -2270,8 +2270,21 @@
           alert('Add Money feature will open here');
           break;
         case 'sendMoney':
+          // Show a tiny loading indicator while navigating
+          try {
+            const btn = document.getElementById('sendMoneyBtn');
+            if (btn) {
+              btn.disabled = true;
+              btn.setAttribute('aria-busy', 'true');
+              // Swap icon/text to indicate progress
+              const icon = btn.querySelector('i');
+              const label = btn.querySelector('span');
+              if (label) { label.dataset.originalText = label.textContent; label.textContent = 'Opening...'; }
+              if (icon) { icon.className = 'fa fa-spinner fa-spin'; }
+            }
+          } catch (e) { /* no-op */ }
           // Navigate to standalone Send Money page
-        window.location.href = '/send-money.php';
+          window.location.href = '/send-money.php';
           break;
       }
     }

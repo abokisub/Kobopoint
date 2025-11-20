@@ -91,7 +91,7 @@
         </div>
         <div class="actions">
           <button class="btn btn-secondary" id="backBtn">Back</button>
-          <button class="btn btn-primary enabled" id="submitBtn">Confirm</button>
+          <button class="btn btn-primary enabled" id="submitBtn" aria-busy="false">Confirm</button>
         </div>
       </div>
     </div>
@@ -150,6 +150,8 @@
 
       const btn = document.getElementById('submitBtn');
       btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
+      btn.dataset.originalText = btn.textContent;
       btn.textContent = 'Processing...';
 
       try {
@@ -172,7 +174,8 @@
         alert(err.message || 'An unexpected error occurred');
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Confirm';
+        btn.setAttribute('aria-busy', 'false');
+        if (btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
       }
     }
 

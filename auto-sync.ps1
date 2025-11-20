@@ -94,7 +94,8 @@ try {
   }
 
   # Push current branch (set upstream if missing)
-  $hasUpstream = (& git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>$null)
+  # In PowerShell, @{u} is parsed as a hash literal. Quote it so Git receives the upstream ref.
+  $hasUpstream = (& git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>$null)
   if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($hasUpstream)) {
     Write-Host "Setting upstream and pushing: origin/$currentBranch" -ForegroundColor Green
     Git "push -u origin $currentBranch"
