@@ -49,7 +49,7 @@
 </head>
 <body>
   <div class="header">
-    <div class="back-btn" onclick="window.location.href='/transfer/send'" title="Back"><i class="fa fa-chevron-left"></i></div>
+    <div class="back-btn" onclick="window.location.href='/send-money.php'" title="Back"><i class="fa fa-chevron-left"></i></div>
     <div class="title">Send to Kobopoint</div>
   </div>
   <div class="app">

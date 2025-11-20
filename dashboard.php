@@ -2271,7 +2271,7 @@
           break;
         case 'sendMoney':
           // Navigate to standalone Send Money page
-          window.location.href = '/transfer/send';
+        window.location.href = '/send-money.php';
           break;
       }
     }

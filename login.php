@@ -99,7 +99,7 @@
                  <div class="w-full flex justify-center pt-4">
                      <span class="text-sm text-gray-800">
                          New account?
-                         <a href="#" class="font-semibold text-[#00b875] hover:text-[#009e68]">Signup</a>
+                         <a href="signup.php" class="font-semibold text-[#00b875] hover:text-[#009e68]">Sign up</a>
                      </span>
                  </div>
 
@@ -167,6 +167,17 @@
             }
              form.addEventListener('submit', async function(e) {
                  e.preventDefault();
+                 // Loading state: disable submit and show progress text
+                 const submitBtn = form.querySelector('button[type="submit"]');
+                 if (submitBtn) {
+                     submitBtn.disabled = true;
+                     submitBtn.setAttribute('aria-busy', 'true');
+                     // Preserve original text to restore on error
+                     if (!submitBtn.dataset.originalText) {
+                         submitBtn.dataset.originalText = submitBtn.textContent || 'Login';
+                     }
+                     submitBtn.textContent = 'Logging in...';
+                 }
                  const isPhoneVisible = !document.getElementById('phone-input-group').classList.contains('hidden');
                  const phoneInput = document.querySelector('#phone-input-group input');
                  const emailInput = document.querySelector('#email-input-group input');
@@ -179,10 +190,20 @@
 
                  if (!identifier) {
                      setMessage('Please enter your email or phone.', 'error');
+                     if (submitBtn) {
+                         submitBtn.disabled = false;
+                         submitBtn.removeAttribute('aria-busy');
+                         submitBtn.textContent = submitBtn.dataset.originalText || 'Login to your account';
+                     }
                      return;
                  }
                  if (!passwordInput.value) {
                      setMessage('Please enter your password.', 'error');
+                     if (submitBtn) {
+                         submitBtn.disabled = false;
+                         submitBtn.removeAttribute('aria-busy');
+                         submitBtn.textContent = submitBtn.dataset.originalText || 'Login to your account';
+                     }
                      return;
                  }
 
@@ -203,25 +224,14 @@
 
                      const data = await res.json().catch(() => ({}));
 
-                     if (res.status === 202 && data.two_factor && data.challenge) {
-                         // Prompt for 2FA code without changing layout
-                         const code = window.prompt('Enter your 2FA code');
-                         if (!code) return;
-                         const verifyRes = await fetch(`${API_BASE}/api/2fa/verify`, {
-                             method: 'POST',
-                             headers: { 'Content-Type': 'application/json' },
-                             body: JSON.stringify({ challenge: data.challenge, code }),
-                         });
-                         const verifyData = await verifyRes.json().catch(() => ({}));
-                         if (!verifyRes.ok) {
-                            setMessage(verifyData.message || 'Invalid two-factor code', 'error');
-                            return;
-                         }
-                         localStorage.setItem('kp_token', verifyData.token);
-                        setMessage('Login successful. Redirecting...', 'success');
-        window.location.replace('/dashboard/app');
-                         return;
-                     }
+                    if (res.status === 202 && data.two_factor && data.challenge) {
+                        // Redirect to OTP page with challenge and email (if available)
+                        const qp = new URLSearchParams({ challenge: data.challenge });
+                        if (payload.email) qp.set('email', payload.email);
+                        qp.set('context', 'login');
+                        window.location.href = '/otp.php?' + qp.toString();
+                        return;
+                    }
 
                      if (!res.ok) {
                         // Provide a helpful hint if the server says unauthorized
@@ -230,52 +240,27 @@
                           ? ' Tip: Click "Use Email address" above or just keep typing your email — we auto-detect it.'
                           : '';
                         setMessage(baseMsg + hint, 'error');
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.removeAttribute('aria-busy');
+                            submitBtn.textContent = submitBtn.dataset.originalText || 'Login to your account';
+                        }
                         return;
                      }
                      localStorage.setItem('kp_token', data.token);
                     setMessage('Login successful. Redirecting...', 'success');
-        window.location.replace('/dashboard/app');
+        window.location.replace('/dashboard.php');
                  } catch (err) {
                     setMessage('Network error. Please try again.', 'error');
                      console.error(err);
+                     if (submitBtn) {
+                         submitBtn.disabled = false;
+                         submitBtn.removeAttribute('aria-busy');
+                         submitBtn.textContent = submitBtn.dataset.originalText || 'Login to your account';
+                     }
                  }
              });
          });
-     </script>
- </body>
- </html>
-     </div>
-
-     <script>
-         let isPhoneLogin = true;
-
-         // Initialize Lucide icons
-         document.addEventListener('DOMContentLoaded', function() {
-             lucide.createIcons();
-         });
-
-         function toggleLoginType() {
-             isPhoneLogin = !isPhoneLogin;
-             document.getElementById('phone-input-group').classList.toggle('hidden');
-             document.getElementById('email-input-group').classList.toggle('hidden');
-             document.getElementById('toggle-link').textContent = 
-                 isPhoneLogin ? 'Use Email address' : 'Use Phone number';
-             document.getElementById('input-label').textContent = 
-                 isPhoneLogin ? 'Phone number' : 'Email address';
-         }
-
-         function togglePasswordVisibility() {
-             const input = document.getElementById('password');
-             const icon = document.getElementById('eye-icon');
-             if (input.type === 'password') {
-                 input.type = 'text';
-                 icon.setAttribute('data-lucide', 'eye');
-             } else {
-                 input.type = 'password';
-                 icon.setAttribute('data-lucide', 'eye-off');
-             }
-             lucide.createIcons();
-         }
      </script>
  </body>
  </html>

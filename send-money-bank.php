@@ -34,7 +34,7 @@
 </head>
 <body>
   <div class="header">
-    <div class="back-btn" onclick="window.location.href='/transfer/send'" title="Back"><i class="fa fa-chevron-left"></i></div>
+    <div class="back-btn" onclick="window.location.href='/send-money.php'" title="Back"><i class="fa fa-chevron-left"></i></div>
     <div class="title">Bank Transfer</div>
   </div>
   <div class="app">
@@ -181,10 +181,10 @@
         const destinationBank = d.destinationBankName || '';
         const ref = d.reference || '';
         if (window.Swal) {
-          Swal.fire({ icon:'success', title:'Transfer submitted', html:`<div class="fintech-text">Sent to: <strong>${destinationName}</strong><br>Account: <strong>${destinationAcct}</strong><br>Bank: <strong>${destinationBank || bankCode}</strong><br>Amount: <strong>₦${formatAmount(amount)}</strong><br>Reference: <strong>${ref || '-'}</strong><br>Status: <strong>${d.status || 'pending'}</strong></div>`, confirmButtonText:'Back to Dashboard' }).then(()=>{ window.location.href='/dashboard/app'; });
+          Swal.fire({ icon:'success', title:'Transfer submitted', html:`<div class="fintech-text">Sent to: <strong>${destinationName}</strong><br>Account: <strong>${destinationAcct}</strong><br>Bank: <strong>${destinationBank || bankCode}</strong><br>Amount: <strong>₦${formatAmount(amount)}</strong><br>Reference: <strong>${ref || '-'}</strong><br>Status: <strong>${d.status || 'pending'}</strong></div>`, confirmButtonText:'Back to Dashboard' }).then(()=>{ window.location.href='/dashboard.php'; });
         } else {
           alert('Transfer submitted. Reference: ' + (ref || '-'));
-          window.location.href='/dashboard/app';
+          window.location.href='/dashboard.php';
         }
       } else {
         const msg = (data && data.message) ? data.message : 'Request Unsuccessful';

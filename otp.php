@@ -108,6 +108,9 @@
     // Initialize lucide
     document.addEventListener('DOMContentLoaded', function(){ lucide.createIcons(); });
 
+    // API base (backend)
+    const API_BASE = (window.API_BASE || 'http://127.0.0.1:8000');
+
     // Get email from query param or localStorage (signupEmail)
     function getQueryParam(name) {
       const params = new URLSearchParams(window.location.search);
@@ -125,7 +128,13 @@
     }
 
     const providedEmail = getQueryParam('email') || localStorage.getItem('signupEmail') || '';
+    const challenge = getQueryParam('challenge');
+    const context = getQueryParam('context') || 'login';
     document.getElementById('maskedEmail').textContent = providedEmail ? maskEmail(providedEmail) : 'your email';
+    const formMsgEl = document.getElementById('formMessage');
+    if (!challenge) {
+      formMsgEl.textContent = 'Missing verification challenge. Please go back and try again.';
+    }
 
     // OTP inputs handling
     const inputs = Array.from(Array(6)).map((_, i) => document.getElementById('otp-' + (i+1)));
@@ -194,63 +203,90 @@
       timerText.style.display = '';
     }
 
-    // Resend simulation
-    function resendCode() {
-      // simulate API call to resend OTP to providedEmail
-      if (!providedEmail) {
-        alert('No email available to resend code. Please go back and enter your email.');
+    // Resend via API
+    async function resendCode() {
+      if (!challenge) {
+        alert('Missing challenge. Please go back and start again.');
         return;
       }
       resendBtn.disabled = true;
       resendBtn.textContent = 'Resending...';
-      // Simulate network
-      setTimeout(() => {
-        // on success restart timer
+      try {
+        const resp = await fetch(API_BASE + '/api/2fa/resend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ challenge, context }),
+        });
+        const j = await resp.json().catch(() => ({}));
         resendBtn.disabled = false;
         resendBtn.textContent = 'Resend';
+        if (!resp.ok) {
+          formMsgEl.textContent = j.message || 'Failed to resend code.';
+          return;
+        }
         startTimer(60);
-        // Show small confirmation
-        const msg = document.getElementById('formMessage');
-        msg.style.color = '#16a34a';
-        msg.textContent = 'A new code was sent to ' + maskEmail(providedEmail);
-        setTimeout(() => { msg.textContent = ''; msg.style.color = '#dc2626'; }, 4000);
-      }, 900);
+        formMsgEl.style.color = '#16a34a';
+        formMsgEl.textContent = 'A new code was sent to ' + (providedEmail ? maskEmail(providedEmail) : 'your email');
+        setTimeout(() => { formMsgEl.textContent = ''; formMsgEl.style.color = '#dc2626'; }, 4000);
+      } catch (e) {
+        resendBtn.disabled = false;
+        resendBtn.textContent = 'Resend';
+        formMsgEl.textContent = 'Network error. Please try again.';
+      }
     }
 
     // Verify handler
-    function handleVerify(e) {
+    async function handleVerify(e) {
       e.preventDefault();
       const code = inputs.map(i => i.value.trim()).join('');
-      const msgEl = document.getElementById('formMessage');
       if (!/^\d{6}$/.test(code)) {
-        msgEl.textContent = 'Enter the 6-digit verification code.';
+        formMsgEl.textContent = 'Enter the 6-digit verification code.';
         return;
       }
-      // Simulate verify - replace with API POST to verify code and email/session
-      document.getElementById('verifyBtn').disabled = true;
-      document.getElementById('verifyBtn').textContent = 'Verifying...';
-      msgEl.textContent = '';
-
-      setTimeout(() => {
-        // Fake success if code === "123456" (for local dev), else error
-        if (code === '123456') {
-          document.getElementById('verifyBtn').textContent = 'Verified ✓';
-          // proceed - e.g., redirect to dashboard or next step
-          alert('OTP verified (simulation). You can now proceed.');
-          // example: window.location.href = '/welcome.html';
-        } else {
-          document.getElementById('verifyBtn').disabled = false;
-          document.getElementById('verifyBtn').textContent = 'Verify';
-          msgEl.textContent = 'Invalid code. Please try again or resend.';
+      const verifyBtn = document.getElementById('verifyBtn');
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = 'Verifying...';
+      formMsgEl.textContent = '';
+      try {
+        const resp = await fetch(API_BASE + '/api/2fa/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ challenge, code }),
+        });
+        const json = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          verifyBtn.disabled = false;
+          verifyBtn.textContent = 'Verify';
+          formMsgEl.textContent = json.message || 'Invalid code. Please try again or resend.';
+          return;
         }
-      }, 900);
+        // Success
+        verifyBtn.textContent = 'Verified ✓';
+        try { localStorage.setItem('kp_token', json.token); } catch (_) {}
+        // Optional: prefetch user to confirm account number is ready
+        try {
+          const uResp = await fetch(API_BASE + '/api/user', { headers: { 'Authorization': 'Bearer ' + json.token, 'Accept': 'application/json' } });
+          const u = await uResp.json().catch(() => ({}));
+          if (u && u.bell_account_number) {
+            try { localStorage.setItem('kp_account_number', u.bell_account_number); } catch (_) {}
+          } else if (u && u.bell_account_number_masked) {
+            try { localStorage.setItem('kp_account_number', u.bell_account_number_masked); } catch (_) {}
+          }
+        } catch (_) {}
+        // Redirect to dashboard (file path to work without router)
+        setTimeout(() => { window.location.replace('/dashboard.php'); }, 500);
+      } catch (err) {
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = 'Verify';
+        formMsgEl.textContent = 'Network error. Please try again.';
+      }
     }
 
     // change email -> go back to signup or allow edit
     document.getElementById('changeEmail').addEventListener('click', (ev) => {
       ev.preventDefault();
-      // You can change this behavior to direct to your signup route
-      history.back();
+      // Direct back to appropriate page
+      if (context === 'registration') window.location.href = '/signup.php'; else window.location.href = '/login.php';
     });
 
     document.getElementById('supportLink').addEventListener('click', (ev) => {

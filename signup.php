@@ -118,10 +118,6 @@
                 <input type="radio" name="gender" value="female" class="accent-[var(--primary-green)]" />
                 <span class="text-sm text-gray-700">Female</span>
               </label>
-              <label class="flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer bg-white">
-                <input type="radio" name="gender" value="other" class="accent-[var(--primary-green)] />
-                <span class="text-sm text-gray-700">Other</span>
-              </label>
             </div>
           </div>
         </div>
@@ -157,8 +153,8 @@
           </div>
 
           <div class="mt-1">
-            <label class="text-sm text-gray-600">Street address (optional)</label>
-            <input name="address" type="text" placeholder="Street, apartment, etc."
+            <label class="text-sm text-gray-600">Street address</label>
+            <input name="address" required type="text" placeholder="Street, apartment, etc."
               class="mt-1 w-full px-4 py-3 border border-gray-200 bg-gray-50 rounded-lg focus:ring-1 focus:ring-[#00b875] focus:border-[#00b875]" />
           </div>
         </div>
@@ -248,7 +244,7 @@
 
         <!-- footer link -->
         <div class="w-full flex justify-center pt-1">
-          <span class="text-sm text-gray-800">Already have an account? <a href="#" class="font-semibold text-[var(--primary-green)] hover:text-[#009e68]">Login</a></span>
+          <span class="text-sm text-gray-800">Already have an account? <a href="login.php" class="font-semibold text-[var(--primary-green)] hover:text-[#009e68]">Login</a></span>
         </div>
       </form>
     </main>
@@ -256,7 +252,15 @@
 
   <script>
     // lucide icons
-    document.addEventListener('DOMContentLoaded', function(){ lucide.createIcons(); });
+    document.addEventListener('DOMContentLoaded', function(){ if (window.lucide && typeof lucide.createIcons === 'function') { lucide.createIcons(); } });
+
+    // Backend API base URL (update this if your backend runs elsewhere)
+    let API_BASE = (localStorage.getItem('api_base') || 'http://127.0.0.1:8000').trim();
+    if (!/^https?:\/\//i.test(API_BASE)) {
+      API_BASE = 'http://' + API_BASE.replace(/^\/+/, '');
+      try { localStorage.setItem('api_base', API_BASE); } catch (_) {}
+    }
+    console.info('Using API_BASE:', API_BASE);
 
     // States (36 + FCT)
     const NIGERIA_STATES = [
@@ -495,27 +499,106 @@
       if (!input) return;
       if (input.type === 'password') { input.type = 'text'; icon.setAttribute('data-lucide','eye'); }
       else { input.type = 'password'; icon.setAttribute('data-lucide','eye-off'); }
-      lucide.createIcons();
+      if (window.lucide && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
     }
 
-    function handleSubmit(e) {
+    async function handleSubmit(e) {
       e.preventDefault();
       if (!validateStage(3)) { showStage(3); return; }
       const terms = document.getElementById('terms').checked;
       if (!terms) { document.getElementById('formMessage').textContent = 'You must accept the Terms & Conditions to continue.'; showStage(4); return; }
 
-      const f = new FormData(document.getElementById('signupForm'));
-      const payload = {};
-      for (const [k,v] of f.entries()) payload[k] = v;
+      const formEl = document.getElementById('signupForm');
+      const f = new FormData(formEl);
+      const data = {
+        first_name: f.get('firstName')?.toString().trim() || '',
+        last_name: f.get('lastName')?.toString().trim() || '',
+        gender: (function(){
+          const g = formEl.elements['gender'];
+          if (!g) return '';
+          if (g.length) { const sel = Array.from(g).find(i=>i.checked); return sel ? sel.value : ''; }
+          return g.checked ? g.value : '';
+        })(),
+        address: f.get('address')?.toString().trim() || '',
+        state: f.get('state')?.toString().trim() || '',
+        city: f.get('city')?.toString().trim() || '',
+        phone: f.get('phone')?.toString().trim() || '',
+        email: f.get('email')?.toString().trim() || '',
+        password: f.get('password')?.toString() || '',
+        password_confirmation: f.get('passwordConfirm')?.toString() || '',
+        referral_username: f.get('referral')?.toString().trim() || null,
+      };
 
-      document.getElementById('formMessage').textContent = '';
-      document.getElementById('submitBtn').disabled = true;
-      document.getElementById('submitBtn').textContent = 'Creating...';
+      const msgEl = document.getElementById('formMessage');
+      const submitBtn = document.getElementById('submitBtn');
+      msgEl.textContent = '';
+      submitBtn.disabled = true;
+      submitBtn.setAttribute('aria-busy', 'true');
+      // Preserve original text to restore on error
+      if (!submitBtn.dataset.originalText) {
+        submitBtn.dataset.originalText = submitBtn.textContent || 'Create account';
+      }
+      submitBtn.textContent = 'Creating...';
 
-      setTimeout(() => {
-        document.getElementById('submitBtn').textContent = 'Created ✓';
-        alert('Account created (simulation). Payload:\n' + JSON.stringify(payload, null, 2));
-      }, 900);
+      try {
+        const res = await fetch(API_BASE + '/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const bodyText = await res.text();
+        let json;
+        try { json = JSON.parse(bodyText); } catch (_) { json = { message: bodyText || 'Unexpected response' }; }
+
+        if (res.status === 422) {
+          const errors = json.errors || {};
+          const firstKey = Object.keys(errors)[0];
+          const firstMsg = Array.isArray(errors[firstKey]) ? errors[firstKey][0] : (errors[firstKey] || json.message || 'Validation failed');
+          msgEl.textContent = firstMsg;
+          submitBtn.disabled = false;
+          submitBtn.removeAttribute('aria-busy');
+          submitBtn.textContent = submitBtn.dataset.originalText || 'Create account';
+          return;
+        }
+
+        if (res.status === 202 && json.two_factor && json.challenge) {
+          try { localStorage.setItem('signupEmail', data.email); } catch (_) {}
+          // Redirect to OTP page with challenge & email
+          const qp = new URLSearchParams({ challenge: json.challenge, email: data.email, context: 'registration' });
+          window.location.href = '/otp.php?' + qp.toString();
+          return;
+        }
+
+        if (!res.ok) {
+          msgEl.textContent = json.message || 'Registration failed. Please try again.';
+          submitBtn.disabled = false;
+          submitBtn.removeAttribute('aria-busy');
+          submitBtn.textContent = submitBtn.dataset.originalText || 'Create account';
+          return;
+        }
+
+        // Fallback success (if server returns 201 with token)
+        if (json && json.token) {
+          try { localStorage.setItem('kp_token', json.token); } catch (_) {}
+          msgEl.classList.remove('text-red-600');
+          msgEl.classList.add('text-green-700');
+          msgEl.textContent = (json.message || 'Registration successful') + ' — setting up your virtual account...';
+          submitBtn.textContent = 'Created ✓';
+          setTimeout(() => { window.location.replace('/dashboard.php'); }, 1000);
+          return;
+        }
+        // Otherwise, just show message
+        msgEl.textContent = json.message || 'Registration completed.';
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('aria-busy');
+        submitBtn.textContent = submitBtn.dataset.originalText || 'Create account';
+      } catch (err) {
+        console.error(err);
+        msgEl.textContent = 'Network error. Please check your connection and try again.';
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('aria-busy');
+        submitBtn.textContent = submitBtn.dataset.originalText || 'Create account';
+      }
     }
 
     function onBack() {

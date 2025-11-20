@@ -33,14 +33,14 @@
 </head>
 <body>
   <div class="header">
-    <div class="back-btn" onclick="window.location.href='/dashboard/app'" title="Back"><i class="fa fa-chevron-left"></i></div>
+    <div class="back-btn" onclick="window.location.href='/dashboard.php'" title="Back"><i class="fa fa-chevron-left"></i></div>
     <div class="title">Send Money</div>
   </div>
   <div class="app">
     <div class="muted">Send money from your account seamlessly with different method</div>
     <div class="section-title">Select your preference</div>
     <div class="stack">
-      <div class="option-card" onclick="window.location.href='/transfer/send/kobo'">
+      <div class="option-card" onclick="window.location.href='/send-money-kobo.php'">
         <div class="option-icon">
           <img src="/assets/img/logo.png" alt="Kobopoint" width="48" height="48" style="object-fit:contain;" />
         </div>
@@ -51,7 +51,7 @@
         <div class="chev"><i class="fa fa-chevron-right"></i></div>
       </div>
 
-      <div class="option-card" onclick="window.location.href='/transfer/send/bank'">
+      <div class="option-card" onclick="window.location.href='/send-money-bank.php'">
         <div class="option-icon">
           <img src="/assets/img/bank-icon.svg" alt="Bank" width="48" height="48" />
         </div>
